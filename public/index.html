@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1f2937, #111827);
+            color: #d1d5db;
+        }
+        .tab-button.active {
+            background-color: #2e3a4e;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .main-container {
+            max-width: 1400px;
+            height: 90vh;
+            margin: 5vh auto;
+            display: flex;
+            border-radius: 2rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .left-pane {
+            background-color: #1a202c;
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2d3748;
+        }
+        .right-pane {
+            width: 70%;
+            background-color: #111827;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .itinerary-card {
+            background-color: #1f2937;
+            border-radius: 1rem;
+            transition: all 0.3s ease-in-out;
+        }
+        .itinerary-card.expanded {
+            background-color: #2e3a4e;
+        }
+        .prose {
+            color: #d1d5db;
+        }
+        .prose h1, .prose h2, .prose h3 {
+            color: #fff;
+        }
+        .prose a {
+            color: #3b82f6;
+        }
+        .prose ul, .prose ol {
+            padding-left: 1.5em;
+        }
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 1rem;
+            margin-top: 1rem;
+        }
+        #custom-alert {
+            right: 1rem;
+            bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Left Pane: Tabs & Sidebar -->
+        <div class="left-pane p-6 flex flex-col">
+            <h1 class="text-3xl font-extrabold text-white mb-6">AI Travel Agent <span class="text-blue-500">✈️</span></h1>
+            
+            <div class="flex flex-col space-y-2 mb-6">
+                <button id="plan-tab" class="tab-button p-4 rounded-xl text-left font-medium transition-colors">Plan a Trip</button>
+                <button id="rider-tab" class="tab-button p-4 rounded-xl text-left font-medium transition-colors">Rider's Route</button>
+                <button id="my-itineraries-tab" class="tab-button p-4 rounded-xl text-left font-medium transition-colors">My Itineraries</button>
+            </div>
+            <div class="flex-grow"></div>
+            <div class="pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 text-center">Powered by Google AI</p>
+                <div id="status-message" class="text-center text-xs text-gray-400 mt-2">Ready</div>
+            </div>
+        </div>
+
+        <!-- Right Pane: Content -->
+        <div class="right-pane">
+            <div id="plan-content" class="tab-content active">
+                <div id="initial-form">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-200">Your personalized trip, planned in seconds.</h2>
+                    <div class="mb-4">
+                        <label for="destination" class="block text-sm font-medium text-gray-400 mb-1">Destination</label>
+                        <input type="text" id="destination" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label for="duration" class="block text-sm font-medium text-gray-400 mb-1">Duration (days)</label>
+                        <input type="number" id="duration" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Budget</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center p-3 bg-gray-800 rounded-lg border border-gray-700 cursor-pointer transition-all duration-200">
+                                <input type="radio" name="budget" value="Budget-Friendly" class="hidden">
+                                <span class="text-gray-400">Budget-Friendly (₹)</span>
+                            </label>
+                            <label class="flex items-center p-3 bg-gray-800 rounded-lg border border-gray-700 cursor-pointer transition-all duration-200">
+                                <input type="radio" name="budget" value="Mid-Range" class="hidden">
+                                <span class="text-gray-400">Mid-Range (₹₹)</span>
+                            </label>
+                            <label class="flex items-center p-3 bg-gray-800 rounded-lg border border-gray-700 cursor-pointer transition-all duration-200">
+                                <input type="radio" name="budget" value="Luxury" class="hidden">
+                                <span class="text-gray-400">Luxury (₹₹₹)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label for="interests" class="block text-sm font-medium text-gray-400 mb-1">Interests (e.g., adventure, food, history)</label>
+                        <input type="text" id="interests" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button id="generate-from-form-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">✨ Generate Itinerary</button>
+                    <div class="text-center mt-4">
+                        <label for="image-upload" class="cursor-pointer text-sm text-blue-400 hover:underline">Or generate from an image</label>
+                        <input type="file" id="image-upload" class="hidden" accept="image/*">
+                    </div>
+                </div>
+                <div id="itinerary-display-container" class="hidden">
+                    <div id="itinerary-display" class="prose"></div>
+                    <div class="mt-6 flex justify-between">
+                        <button id="save-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Save Itinerary</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="rider-content" class="tab-content">
+                <div id="rider-form">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-200">Plan your perfect road trip.</h2>
+                    <div class="mb-4">
+                        <label for="start-point" class="block text-sm font-medium text-gray-400 mb-1">Starting Point</label>
+                        <input type="text" id="start-point" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label for="end-point" class="block text-sm font-medium text-gray-400 mb-1">Destination</label>
+                        <input type="text" id="end-point" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label for="rider-duration" class="block text-sm font-medium text-gray-400 mb-1">Duration (days)</label>
+                        <input type="number" id="rider-duration" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label for="mode-of-transport" class="block text-sm font-medium text-gray-400 mb-1">Mode of Transport</label>
+                        <select id="mode-of-transport" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="Car">Car</option>
+                            <option value="Bike">Bike</option>
+                            <option value="Public Transport">Public Transport</option>
+                            <option value="Train">Train</option>
+                            <option value="Hiking">Hiking</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="departure-date" class="block text-sm font-medium text-gray-400 mb-1">Departure Date</label>
+                        <input type="date" id="departure-date" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button id="generate-rider-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Generate Route</button>
+                </div>
+                <div id="rider-itinerary-display-container" class="hidden">
+                    <div id="rider-itinerary-display" class="prose"></div>
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div id="my-itineraries-content" class="tab-content">
+                <h2 class="text-2xl font-bold mb-4 text-gray-200">My Saved Itineraries</h2>
+                <div id="itinerary-list">
+                    <p class="text-center text-gray-400 py-10">Loading saved itineraries...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="custom-alert" class="fixed bottom-4 right-4 hidden z-50">
+        <div id="custom-alert-content" class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-xl"></div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBNoyPubKd1Cc2CtnTjTDPmjy7GVyp6tuQ&libraries=places&callback=initMap"></script>
+
+    <script>
+        // All JavaScript logic is now in this single script block.
+
+        // Firebase and API Config
+        const appId = 'use ur api id here';
+        const apiKey = "use ur api key herer";
+        const firebaseConfig = {
+            apiKey: "use ur api key here",
+            authDomain: "ur ur domain here",
+            projectId: "use ur project id here",
+            storageBucket: "use ur storage bucket here",
+            messagingSenderId: "use ur messaging sender id here",
+            appId: "use ur api id hered"
+        };
+
+        // Global variables for Firebase and map
+        let app, db, auth, currentItinerary = null;
+        let map, directionsRenderer, geocoder, directionsService, markers = [];
+
+        // UI element references
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const initialForm = document.getElementById('initial-form');
+        const itineraryDisplayContainer = document.getElementById('itinerary-display-container');
+        const itineraryDisplay = document.getElementById('itinerary-display');
+        const generateFromFormBtn = document.getElementById('generate-from-form-btn');
+        const riderForm = document.getElementById('rider-form');
+        const riderItineraryDisplayContainer = document.getElementById('rider-itinerary-display-container');
+        const riderItineraryDisplay = document.getElementById('rider-itinerary-display');
+        const generateRiderBtn = document.getElementById('generate-rider-btn');
+        const itineraryList = document.getElementById('itinerary-list');
+        const mapEl = document.getElementById('map');
+        const customAlert = document.getElementById('custom-alert');
+        const customAlertContent = document.getElementById('custom-alert-content');
+        const saveBtn = document.getElementById('save-btn');
+
+        // --- Core Functions ---
+        function showCustomAlert(message, duration = 3000) {
+            customAlertContent.textContent = message;
+            customAlert.classList.remove('hidden');
+            setTimeout(() => customAlert.classList.add('hidden'), duration);
+        }
+
+        function showTab(tabName) {
+            tabContents.forEach(content => content.classList.remove('active'));
+            tabButtons.forEach(button => button.classList.remove('active'));
+            document.getElementById(`${tabName}-content`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            initialForm.classList.add('hidden');
+            itineraryDisplayContainer.classList.add('hidden');
+            riderForm.classList.add('hidden');
+            riderItineraryDisplayContainer.classList.add('hidden');
+            mapEl.classList.add('hidden');
+
+            if (tabName === 'plan') {
+                initialForm.classList.remove('hidden');
+            } else if (tabName === 'rider') {
+                riderForm.classList.remove('hidden');
+                mapEl.classList.remove('hidden');
+            } else if (tabName === 'my-itineraries') {
+                loadSavedItineraries();
+            }
+        }
+
+        async function getItineraryFromGemini(prompt, history = [], imageBase64 = null) {
+            const contents = [{ role: "user", parts: [{ text: prompt }] }];
+            if (imageBase64) {
+                contents[0].parts.push({
+                    inlineData: { mimeType: "image/jpeg", data: imageBase64 }
+                });
+            }
+            const payload = { contents };
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                }
+                throw new Error('Gemini API returned no candidates.');
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                throw error;
+            }
+        }
+
+        async function geocodeAddress(address) {
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ 'address': address }, (results, status) => {
+                    if (status === 'OK') {
+                        resolve({ location: results[0].geometry.location, address: results[0].formatted_address });
+                    } else {
+                        reject(new Error('Geocode was not successful for the following reason: ' + status));
+                    }
+                });
+            });
+        }
+
+        async function plotRiderRoute(locations, travelMode) {
+            if (!map || !directionsService || !directionsRenderer) return;
+            if (locations.length < 2) return;
+            directionsRenderer.setDirections({ routes: [] });
+
+            const waypoints = locations.slice(1, -1).map(location => ({ location: location, stopover: true }));
+            const request = {
+                origin: locations[0],
+                destination: locations[locations.length - 1],
+                waypoints: waypoints,
+                travelMode: google.maps.TravelMode[travelMode.toUpperCase()],
+            };
+
+            try {
+                const response = await directionsService.route(request);
+                if (response.status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    showCustomAlert('Route generated successfully!');
+                } else {
+                    showCustomAlert('Directions request failed due to ' + response.status);
+                }
+            } catch (error) {
+                console.error("Error plotting rider route:", error);
+                showCustomAlert('Error plotting rider route.');
+            }
+        }
+        
+        async function saveItinerary(title, content) {
+            const userId = auth.currentUser?.uid || 'anonymous';
+            if (userId === 'anonymous') {
+                showCustomAlert("Please sign in to save itineraries.");
+                return;
+            }
+            const userItinerariesRef = firebase.firestore.collection(db, `artifacts/${appId}/users/${userId}/itineraries`);
+            await firebase.firestore.addDoc(userItinerariesRef, { title, content, date: new Date() });
+        }
+
+        async function getSavedItineraries() {
+            const userId = auth.currentUser?.uid || 'anonymous';
+            if (userId === 'anonymous') return [];
+            const userItinerariesRef = firebase.firestore.collection(db, `artifacts/${appId}/users/${userId}/itineraries`);
+            const snapshot = await firebase.firestore.getDocs(userItinerariesRef);
+            const itineraries = [];
+            snapshot.forEach(doc => itineraries.push({ id: doc.id, ...doc.data() }));
+            return itineraries;
+        }
+
+        async function deleteItinerary(itineraryId) {
+            const userId = auth.currentUser?.uid || 'anonymous';
+            if (userId === 'anonymous') throw new Error("User not authenticated.");
+            const docRef = firebase.firestore.doc(db, `artifacts/${appId}/users/${userId}/itineraries`, itineraryId);
+            await firebase.firestore.deleteDoc(docRef);
+        }
+
+        // --- Event Handlers ---
+        document.getElementById('plan-tab').addEventListener('click', () => showTab('plan'));
+        document.getElementById('rider-tab').addEventListener('click', () => showTab('rider'));
+        document.getElementById('my-itineraries-tab').addEventListener('click', () => showTab('my-itineraries'));
+
+        generateFromFormBtn.addEventListener('click', async () => {
+            const destination = document.getElementById('destination').value;
+            const duration = document.getElementById('duration').value;
+            const budget = document.querySelector('input[name="budget"]:checked')?.value;
+            const interests = document.getElementById('interests').value;
+
+            if (!destination || !duration || !budget) {
+                showCustomAlert('Please fill in all fields.');
+                return;
+            }
+
+            const prompt = `Act as a world-class travel planner. Create a detailed, day-by-day itinerary for a trip to ${destination} for ${duration} days, with a ${budget} budget, and focusing on ${interests}. Include specific place names for attractions, restaurants, and activities.`;
+            
+            initialForm.classList.add('hidden');
+            itineraryDisplayContainer.classList.remove('hidden');
+            showCustomAlert('Generating your itinerary...', 5000);
+            
+            try {
+                const itinerary = await getItineraryFromGemini(prompt);
+                currentItinerary = { content: itinerary, title: `${destination} Trip` };
+                itineraryDisplay.innerHTML = marked.parse(itinerary);
+                showCustomAlert('Itinerary generated successfully!');
+            } catch (error) {
+                console.error("Error generating itinerary:", error);
+                showCustomAlert('Error generating itinerary. Please try again later.');
+            }
+        });
+
+        generateRiderBtn.addEventListener('click', async () => {
+            const startPoint = document.getElementById('start-point').value;
+            const endPoint = document.getElementById('end-point').value;
+            const duration = document.getElementById('rider-duration').value;
+            const transportMode = document.getElementById('mode-of-transport').value;
+            const departureDate = document.getElementById('departure-date').value;
+
+            if (!startPoint || !endPoint) {
+                showCustomAlert('Please provide a starting point and destination.');
+                return;
+            }
+
+            const prompt = `Act as a professional rider's route planner. Create a multi-day itinerary for a road trip from ${startPoint} to ${endPoint} over ${duration} days, using a ${transportMode}. The trip starts on ${departureDate}. Include route details, scenic stops, and best places to visit.`;
+            
+            riderForm.classList.add('hidden');
+            riderItineraryDisplayContainer.classList.remove('hidden');
+            showCustomAlert('Planning your perfect route...', 5000);
+            
+            try {
+                const itinerary = await getItineraryFromGemini(prompt);
+                currentItinerary = { content: itinerary, title: `Rider Route: ${startPoint} to ${endPoint}` };
+                riderItineraryDisplay.innerHTML = marked.parse(itinerary);
+                
+                const locations = [startPoint, ...itinerary.split('\n').filter(line => line.trim().startsWith('-')).map(line => line.substring(2).trim().split('.')[0]), endPoint];
+                plotRiderRoute(locations, transportMode);
+
+                showCustomAlert('Rider route generated!');
+            } catch (error) {
+                console.error("Error generating rider route:", error);
+                showCustomAlert('Error generating rider route. Please try again.');
+            }
+        });
+
+        // Load itineraries when the My Itineraries tab is clicked
+        async function loadSavedItineraries() {
+            itineraryList.innerHTML = '<p class="text-center text-gray-400 py-10">Loading saved itineraries...</p>';
+            const itineraries = await getSavedItineraries();
+            itineraryList.innerHTML = '';
+
+            if (itineraries.length === 0) {
+                itineraryList.innerHTML = '<p class="text-center text-gray-400 py-10">No saved itineraries found. Save one to see it here!</p>';
+                return;
+            }
+
+            itineraries.forEach(it => {
+                const card = document.createElement('div');
+                card.className = 'itinerary-card p-6 mb-4 cursor-pointer';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-white">${it.title}</h3>
+                        <button class="text-red-500 hover:text-red-400 transition-colors delete-itinerary-btn" data-id="${it.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2">${new Date(it.date.seconds * 1000).toLocaleDateString()}</p>
+                `;
+                card.addEventListener('click', () => {
+                    currentItinerary = it;
+                    itineraryDisplay.innerHTML = marked.parse(it.content);
+                    showTab('plan');
+                    initialForm.classList.add('hidden');
+                    itineraryDisplayContainer.classList.remove('hidden');
+                    showCustomAlert('Itinerary loaded successfully!');
+                });
+                itineraryList.appendChild(card);
+            });
+
+            itineraryList.querySelectorAll('.delete-itinerary-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = e.target.closest('button').dataset.id;
+                    try {
+                        await deleteItinerary(id);
+                        showCustomAlert('Itinerary deleted.');
+                        loadSavedItineraries();
+                    } catch (error) {
+                        console.error("Error deleting itinerary:", error);
+                        showCustomAlert('Error deleting itinerary.');
+                    }
+                });
+            });
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            if (!currentItinerary) {
+                showCustomAlert('No itinerary to save!');
+                return;
+            }
+            try {
+                await saveItinerary(currentItinerary.title, currentItinerary.content);
+                showCustomAlert('Itinerary saved!');
+            } catch (error) {
+                showCustomAlert('Error saving itinerary.');
+                console.error("Error saving itinerary:", error);
+            }
+        });
+
+        window.initMap = function() {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth.getAuth(app);
+            db = firebase.firestore.getFirestore(app);
+            
+            if (typeof __initial_auth_token !== 'undefined') {
+                firebase.auth.signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                firebase.auth.signInAnonymously(auth);
+            }
+
+            map = new google.maps.Map(mapEl, {
+                center: { lat: 20.5937, lng: 78.9629 },
+                zoom: 5,
+                mapId: "DEMO_MAP_ID",
+                streetViewControl: false,
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+            geocoder = new google.maps.Geocoder();
+            showTab('plan');
+        };
+    </script>
+</body>
+</html>
